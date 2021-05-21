@@ -1,0 +1,9 @@
+VAGRANTFILE_API_VERSION: "2"
+BOX_NAME: "vasatanasov/docker-ubuntu-dob"
+MEMORY: 2048
+CPUS: 1
+MANAGERS: 1
+MANAGER_IP: 192.168.10.1
+WORKERS: 2
+WORKER_IP: 192.168.10.10
+SHARED_DIR: "/home/vagrant/shared"

@@ -1,0 +1,106 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'yaml'
+settings = YAML.load_file 'settings.yml'
+
+VAGRANTFILE_API_VERSION = settings['VAGRANTFILE_API_VERSION'] || "2"
+
+# Location of the external files used by this script...
+vagrant_assets = File.join(File.dirname(__FILE__), "assets")
+
+class Machine
+  attr_reader :hostname, :ip, :type
+
+  def initialize(hostname, ip, type)
+    @hostname = hostname
+    @ip = ip
+    @type = type
+  end
+
+end
+
+class MachineType
+  MACHINE_TYPES = [ MANAGER = "manager", WORKER = "worker" ]
+end
+
+def generate_machines(type, ip, size)
+  machines = []
+  (1..size).each do |n| 
+    machine = Machine.new("#{type}-#{n}", "#{ip}#{n}", type)
+    p machine
+    machines.push(machine)
+  end
+
+  return machines
+end
+
+managers = generate_machines(MachineType::MANAGER, settings["MANAGER_IP"], settings["MANAGERS"])
+workers = generate_machines(MachineType::WORKER, settings["WORKER_IP"], settings["WORKERS"])
+
+machines = managers + workers
+
+File.open("#{vagrant_assets}/hosts", 'w') { |file| 
+  machines.each do |machine|
+    file.write("#{machine.ip} #{machine.hostname} #{machine.hostname}\n")
+  end
+}
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.insert_key = false
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = settings['MEMORY']
+    v.cpus = settings['CPUS']
+  end
+
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  manager_ip = nil
+  shared_dir = "#{settings["SHARED_DIR"]}"
+
+  machines.each.with_index(1) do |machine, index|
+
+    config.vm.define machine.hostname do |i|
+      i.vm.box = settings['BOX_NAME']
+      i.vm.hostname = machine.hostname
+      i.vm.network "private_network", ip: "#{machine.ip}"
+      i.vm.synced_folder ".", "/vagrant", disabled: true
+
+      if File.file?("#{vagrant_assets}/logo") 
+        i.vm.provision "file", source: "#{vagrant_assets}/logo", destination: "/tmp/logo"
+        i.vm.provision "shell", inline: "cat /tmp/logo > /etc/profile.d/greeting.sh"
+      end
+      
+      if index == 1 and machine.type == MachineType::MANAGER
+        i.vm.provision "shell", inline: "docker swarm init --advertise-addr #{machine.ip}"
+        i.vm.provision "shell", inline: "docker swarm join-token -q worker > #{shared_dir}/worker_token"
+        i.vm.provision "shell", inline: "docker swarm join-token -q manager > #{shared_dir}/manager_token"
+        manager_ip = machine.ip
+      else
+        i.vm.provision "shell", inline: "docker swarm join --advertise-addr #{machine.ip} --listen-addr #{machine.ip}:2377 --token `cat #{shared_dir}/worker_token` #{manager_ip}:2377"
+      end 
+
+      # i.vm.provision "shell", path: "./provision.sh"
+
+      if File.file?("#{vagrant_assets}/hosts") 
+        i.vm.provision "shell", inline: "cat #{shared_dir}/hosts >> /etc/hosts", privileged: true
+      end 
+
+      i.vm.provider "virtualbox" do |vb, override|
+        vb.name = machine.hostname
+        vb.check_guest_additions = false
+
+        override.vm.synced_folder "#{vagrant_assets}", "#{shared_dir}"
+        
+        console_log_file = File.join(File.dirname(__FILE__), "console-#{machine.hostname}.log")
+        vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
+        vb.customize ["modifyvm", :id, "--uartmode1", "file", console_log_file]
+      end
+    end
+
+  end
+
+end

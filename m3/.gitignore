@@ -1,0 +1,7 @@
+*.tmp
+*.bak
+.vagrant
+.idea
+*.log
+assets/*_token
+assets/hosts

@@ -1,0 +1,38 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+$run_container = <<-SCRIPT
+  docker image build -t server /vagrant
+  docker container run -d -p 8080:80 --name web-1 server
+SCRIPT
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.insert_key = false
+
+  config.vm.define "dobdocker" do |dobdocker|
+    dobdocker.vm.box = "vasatanasov/ubuntu-dob"
+    dobdocker.vm.hostname = "docker.dob.lab"
+    dobdocker.vm.network "private_network", ip: "192.168.89.100"
+    dobdocker.vm.network "forwarded_port", guest: 8080, host: 8080, auto_correct: true
+
+    dobdocker.vm.provision :shell do |shell|
+      shell.path = "https://raw.githubusercontent.com/VasAtanasov/scripts/main/docker-dev/docker.sh"
+    end
+
+    dobdocker.vm.provision :shell do |shell|
+      shell.env = { 'CURRENT_USER' => 'vagrant'}
+      shell.path = "https://raw.githubusercontent.com/VasAtanasov/scripts/main/docker-dev/docker-group.sh"
+    end
+
+    dobdocker.vm.provision :shell, :inline => $run_container
+
+    dobdocker.vm.provider :virtualbox do |vb|
+      vb.name = "ubuntu-docker-host"
+      vb.memory = 4096
+      vb.cpus = 2
+    end  
+  end
+
+end
