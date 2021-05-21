@@ -78,6 +78,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         i.vm.provision "shell", inline: "docker swarm init --advertise-addr #{machine.ip}"
         i.vm.provision "shell", inline: "docker swarm join-token -q worker > #{shared_dir}/worker_token"
         i.vm.provision "shell", inline: "docker swarm join-token -q manager > #{shared_dir}/manager_token"
+
+        i.vm.network "forwarded_port", guest: 8080, host: 8080, protocol: "tcp", auto_correct: true
         manager_ip = machine.ip
       else
         i.vm.provision "shell", inline: "docker swarm join --advertise-addr #{machine.ip} --listen-addr #{machine.ip}:2377 --token `cat #{shared_dir}/worker_token` #{manager_ip}:2377"
