@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 require 'yaml'
-settings = YAML.load_file 'settings.yml'
+settings = YAML.load_file File.join(File.dirname(__FILE__), 'settings.yml')
 
 VAGRANTFILE_API_VERSION = settings['VAGRANTFILE_API_VERSION'] || "2"
 
@@ -105,4 +105,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   end
 
+end
+
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.trigger.after :up do |trigger|
+    trigger.name = "Hello world"
+    trigger.info = "I am running after vagrant up!!"
+  end
 end
