@@ -1,10 +1,10 @@
-version: "3"
+version: "3.9"
 
 services:
-    swrm-php:
+    web:
         image: shekeriev/dob-w3-php
         deploy:
-          replicas: 5
+            replicas: 3
         ports:
             - 8080:80
         volumes:
@@ -12,9 +12,9 @@ services:
         networks:
             - swrm-network
         depends_on:
-            - swrm-mysql
+            - db
 
-    swrm-mysql:
+    db:
         image: shekeriev/dob-w3-mysql
         networks:
             - swrm-network

@@ -25,7 +25,12 @@ command_exists() {
 if command_exists docker; then
     if [ "$(docker info --format {{.Swarm.LocalNodeState}})" = "active" ]; then
         if [ "$(docker info --format "{{.Swarm.ControlAvailable}}")" = "true" ]; then
-            echo "Current node is a Manager."
+            is_leader=$(docker node inspect self --format "{{ .ManagerStatus.Leader }}")
+            sufix=""
+            if $is_leader; then
+                sufix="(Leader)"
+            fi
+            echo "Current node is a Manager${sufix}."
         else
             echo "Current node is a Worker."
         fi
