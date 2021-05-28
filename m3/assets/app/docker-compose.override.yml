@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+    adminer:
+        image: adminer
+        environment:
+            ADMINER_DEFAULT_SERVER: db
+            ADMINER_DESIGN: nette
+        restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+        ports:
+            - 8008:8080
+        networks:
+            - backend
+networks:
+    backend:

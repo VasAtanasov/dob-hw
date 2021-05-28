@@ -1,25 +1,65 @@
 version: "3.9"
 
 services:
-    web:
-        image: shekeriev/dob-w3-php
-        deploy:
-            replicas: 3
+    client:
+        image: 127.0.0.1:5000/client
+        build:
+            context: ./client
+            dockerfile: Dockerfile
         ports:
-            - 8080:80
-        volumes:
-            - "/home/vagrant/shared/app/php:/var/www/html:ro"
+            - "3001:80"
+        restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+        deploy:
+            mode: replicated
+            replicas: 3
+        # depends_on:
+        #   - app-server
         networks:
-            - swrm-network
-        depends_on:
-            - db
+            - frontend
+
+    server:
+        image: 127.0.0.1:5000/server
+        build:
+            context: ./server
+            dockerfile: Dockerfile
+        healthcheck:
+            test: "${DOCKER_WEB_HEALTHCHECK_TEST:-curl localhost:8000/up}"
+            interval: "60s"
+            timeout: "3s"
+            start_period: "5s"
+            retries: 3
+        ports:
+            - "8007:8007"
 
     db:
-        image: shekeriev/dob-w3-mysql
-        networks:
-            - swrm-network
+        image: mariadb:10.6
         environment:
-            MYSQL_ROOT_PASSWORD: "12345"
+            - MYSQL_ROOT_PASSWORD=${DB_ROOTPASSWORD}
+            - MYSQL_DATABASE=${DB_NAME}
+            - MYSQL_USER=${DB_USERNAME}
+            - MYSQL_PASSWORD=${DB_PASSWORD}
+        volumes:
+            - mysql:/var/lib/mysql
+        ports:
+            - "3306:3306"
+        networks:
+            - backend
+
+    liquibase:
+        image: 127.0.0.1:5000/liquibase
+        build:
+            context: ./db
+            dockerfile: Dockerfile
+        environment:
+            - LIQUIBASE_URL=${DB_URL}
+            - LIQUIBASE_USERNAME=${DB_USERNAME}
+            - LIQUIBASE_PASSWORD=${DB_PASSWORD}
+        networks:
+            - backend
+
+volumes:
+    mysql:
 
 networks:
-    swrm-network:
+    backend:
+    frontend:

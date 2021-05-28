@@ -28,16 +28,21 @@ def generate_machines(type, ip, size)
   machines = []
   (1..size).each do |n| 
     machine = Machine.new("#{type}-#{n}", "#{ip}#{n}", type)
-    p machine
     machines.push(machine)
   end
 
   return machines
 end
 
+if settings["MANAGERS"] <= 0 or settings["WORKERS"] <= 0
+  puts "There must be at least one manager and one worker"
+  exit 1
+end
+
 managers = generate_machines(MachineType::MANAGER, settings["MANAGER_IP"], settings["MANAGERS"])
 workers = generate_machines(MachineType::WORKER, settings["WORKER_IP"], settings["WORKERS"])
 
+manager = managers.shift
 machines = managers + workers
 
 File.open("#{vagrant_assets}/hosts", 'w') { |file| 
@@ -49,95 +54,88 @@ File.open("#{vagrant_assets}/hosts", 'w') { |file|
 service_name = "webstack"
 web_service = "#{service_name}_web"
 
+def set_commont_settings(config, machine)
+  config.vm.hostname = machine.hostname
+  config.vm.network "private_network", ip: "#{machine.ip}"
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = machine.hostname
+  end
+end
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.ssh.insert_key = false
+  config.vm.box = settings['BOX_NAME']
+  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-  config.vm.provider "virtualbox" do |v|
+  config.vm.provider "virtualbox" do |v, override|
     v.memory = settings['MEMORY']
     v.cpus = settings['CPUS']
+    v.check_guest_additions = false
+    v.customize ["modifyvm", :id, "--groups", "/#{service_name}"]
+    override.vm.synced_folder "#{vagrant_assets}", "#{shared_dir}"
   end
 
   if Vagrant.has_plugin?("vagrant-vbguest") then
     config.vbguest.auto_update = false
   end
 
-  manager_ip = nil
-  manager = nil
+  if File.file?("#{vagrant_assets}/logo") 
+    config.vm.provision "file", source: "#{vagrant_assets}/logo", destination: "/tmp/logo"
+    config.vm.provision "shell", inline: "cat /tmp/logo > /etc/profile.d/greeting.sh"
+  end
 
-  machines.each.with_index(1) do |machine, index|
+  if File.file?("#{vagrant_assets}/hosts") 
+    config.vm.provision "shell", inline: "cat #{shared_dir}/hosts >> /etc/hosts", privileged: true
+  end
 
-    config.vm.define machine.hostname do |i|
-      i.vm.box = settings['BOX_NAME']
-      i.vm.hostname = machine.hostname
-      i.vm.network "private_network", ip: "#{machine.ip}"
-      i.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.define manager.hostname do |m|
+    set_commont_settings(m, manager)
 
-      if File.file?("#{vagrant_assets}/logo") 
-        i.vm.provision "file", source: "#{vagrant_assets}/logo", destination: "/tmp/logo"
-        i.vm.provision "shell", inline: "cat /tmp/logo > /etc/profile.d/greeting.sh"
-      end
-      
-      if manager_ip.nil? and machine.type == MachineType::MANAGER
-        i.vm.provision "shell", inline: "docker swarm init --advertise-addr #{machine.ip}"
-        i.vm.provision "shell", inline: "docker swarm join-token -q worker > #{shared_dir}/worker_token"
-        i.vm.provision "shell", inline: "docker swarm join-token -q manager > #{shared_dir}/manager_token"
-        i.vm.provision "shell", inline: "docker stack deploy -c #{shared_dir}/app/docker-compose.yml #{service_name}"
-        i.vm.network "forwarded_port", guest: 8080, host: 8080, protocol: "tcp", auto_correct: true
-        manager_ip = machine.ip
-        manager = i
-      elsif machine.type == MachineType::MANAGER
-        i.vm.provision "shell", inline: "docker swarm join --advertise-addr #{machine.ip} --listen-addr #{machine.ip}:2377 --token `cat #{shared_dir}/manager_token` #{manager_ip}:2377"
-      else
-        i.vm.provision "shell", inline: "docker swarm join --advertise-addr #{machine.ip} --listen-addr #{machine.ip}:2377 --token `cat #{shared_dir}/worker_token` #{manager_ip}:2377"
-      end
-
-      if File.file?("#{vagrant_assets}/hosts") 
-        i.vm.provision "shell", inline: "cat #{shared_dir}/hosts >> /etc/hosts", privileged: true
-      end
-
-      i.vm.provider "virtualbox" do |vb, override|
-        vb.name = machine.hostname
-        vb.check_guest_additions = false
-        override.vm.synced_folder "#{vagrant_assets}", "#{shared_dir}"
-      end
+    m.vm.provision "Init docker swarm", type: "shell" do |shell|
+      shell.inline = "docker swarm init --advertise-addr #{manager.ip}"
     end
 
+    m.vm.provision "Create docker registry", type: "shell" do |shell|
+      shell.inline = "docker service create --name registry --publish published=5000,target=5000 registry:2 > /dev/null"
+    end
+
+    m.vm.provision "Extract worker tocken", type: "shell" do |shell|
+      shell.inline = "docker swarm join-token -q worker > #{shared_dir}/worker_token"
+    end
+
+    m.vm.provision "Extract manager tocken", type: "shell" do |shell|
+      shell.inline = "docker swarm join-token -q manager > #{shared_dir}/manager_token"
+    end
+
+    m.vm.network "forwarded_port", guest: 8007, host: 8007, protocol: "tcp", auto_correct: true, id: "api"
+    m.vm.network "forwarded_port", guest: 3001, host: 3001, protocol: "tcp", auto_correct: true, id: "nginx"
+    m.vm.network "forwarded_port", guest: 8008, host: 8008, protocol: "tcp", auto_correct: true, id: "adminer"
+    m.vm.network "forwarded_port", guest: 3306, host: 3307, protocol: "tcp", auto_correct: true, id: "db"
+  end
+
+  machines.each.with_index(1) do |machine, index|
+    config.vm.define machine.hostname do |i|
+      set_commont_settings(i, machine)
+      file_name = if machine.type == MachineType::MANAGER then "manager_token" else "worker_token" end
+      i.vm.provision "shell", inline: "docker swarm join --advertise-addr #{machine.ip} --listen-addr #{machine.ip}:2377 --token `cat #{shared_dir}/#{file_name}` #{manager.ip}:2377"
+    end
   end
 
 end
 
-
-# $deploy_stack = <<-SCRIPT
-#   command_exists() {
-#     command -v "$@" >/dev/null 2>&1
-#   }
-
-#   if command_exists docker; then
-#       if [ "$(docker info --format {{.Swarm.LocalNodeState}})" = "active" ]; then
-#           if [ "$(docker info --format "{{.Swarm.ControlAvailable}}")" = "true" ]; then
-#               is_leader=$(docker node inspect self --format "{{ .ManagerStatus.Leader }}")
-#               sufix=""
-#               if $is_leader; then
-#                   docker stack deploy -c #{shared_dir}/app/docker-compose.yml #{service_name}
-#                   sufix="(Leader)"
-#               else
-#                   docker service update --force #{web_service}
-#               fi
-#               echo "Current node is a Manager${sufix}."
-#           else
-#               echo "Current node is a Worker."
-#               docker service update --force #{web_service}
-#           fi
-#       fi
-#   fi
-
-# SCRIPT
-
 # Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-
 #   config.trigger.after :up do |trigger|
 #     trigger.name = "Hello world"
 #     trigger.info = "I am running after vagrant up!!"
-#     trigger.run_remote = {inline: $deploy_stack}
+#     trigger.run = { inline: "vagrant ssh  #{manager.hostname} -c '/bin/bash #{shared_dir}/start_service.sh #{service_name} #{shared_dir}/app/docker-compose.yml #{workers.size}'", }
 #   end
 # end
+
+
+$build_script = <<-SCRIPT
+  docker service create --name registry --publish published=5000,target=5000 registry:2
+  curl http://localhost:5000/v2/
+  docker-compose build
+  docker-compose push
+  docker stack deploy -c <(docker-compose config) auto
+SCRIPT
