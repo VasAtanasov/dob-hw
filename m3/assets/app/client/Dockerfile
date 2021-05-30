@@ -11,17 +11,15 @@ WORKDIR /app
 # will be cached unless changes to one of those two files 
 # are made.
 COPY package.json ./
-RUN npm install
+COPY package-lock.json ./
+RUN npm ci --silent
+RUN npm install react-scripts@3.2.0 -g --silent
 
 # Copy the main application
 COPY . ./
 
-# Arguments
-ARG REACT_APP_API_BASE_URL
-ENV REACT_APP_API_BASE_URL=http://localhost:8001/api
-
 # Build the application
-RUN npm run build
+RUN npm run build 
 
 #### Stage 2: Serve the React application from Nginx 
 FROM nginx:1.17.3-alpine

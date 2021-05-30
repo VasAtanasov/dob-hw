@@ -12,24 +12,31 @@ services:
         deploy:
             mode: replicated
             replicas: 3
-        # depends_on:
-        #   - app-server
         networks:
             - frontend
 
-    server:
-        image: 127.0.0.1:5000/server
+    api:
+        image: 127.0.0.1:5000/api
         build:
-            context: ./server
+            context: ./api
             dockerfile: Dockerfile
+        restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+        environment: 
+            - DB_URL=${DB_URL}
+            - DB_NAME=${DB_NAME}
+            - DB_USERNAME=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD}
         healthcheck:
-            test: "${DOCKER_WEB_HEALTHCHECK_TEST:-curl localhost:8000/up}"
-            interval: "60s"
-            timeout: "3s"
-            start_period: "5s"
+            test: "${DOCKER_API_HEALTHCHECK_TEST:-curl localhost:8007/up}"
+            interval: "20s"
+            timeout: "15s"
+            start_period: "15s"
             retries: 3
         ports:
             - "8007:8007"
+        networks:
+            - frontend
+            - backend
 
     db:
         image: mariadb:10.6
@@ -38,22 +45,12 @@ services:
             - MYSQL_DATABASE=${DB_NAME}
             - MYSQL_USER=${DB_USERNAME}
             - MYSQL_PASSWORD=${DB_PASSWORD}
+        restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
         volumes:
             - mysql:/var/lib/mysql
+            - ./db/scripts:/docker-entrypoint-initdb.d
         ports:
             - "3306:3306"
-        networks:
-            - backend
-
-    liquibase:
-        image: 127.0.0.1:5000/liquibase
-        build:
-            context: ./db
-            dockerfile: Dockerfile
-        environment:
-            - LIQUIBASE_URL=${DB_URL}
-            - LIQUIBASE_USERNAME=${DB_USERNAME}
-            - LIQUIBASE_PASSWORD=${DB_PASSWORD}
         networks:
             - backend
 
