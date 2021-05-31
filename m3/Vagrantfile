@@ -46,13 +46,13 @@ manager = managers.shift
 machines = managers + workers
 
 File.open("#{vagrant_assets}/hosts", 'w') { |file| 
+  file.write("#{manager.ip} #{manager.hostname} #{manager.hostname}\n")
   machines.each do |machine|
     file.write("#{machine.ip} #{machine.hostname} #{machine.hostname}\n")
   end
 }
 
-service_name = "webstack"
-web_service = "#{service_name}_web"
+service_name = "autostack"
 
 def set_commont_settings(config, machine)
   config.vm.hostname = machine.hostname
@@ -103,10 +103,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       shell.inline = "docker swarm join-token -q manager > #{shared_dir}/manager_token"
     end
 
+    # Create a local docker registry so the images can be shared between the nodes in the swarm.
     m.vm.provision "Create local docker registry", type: "shell" do |shell|
-      shell.inline = <<-SCRIPT
-        docker service create --name registry --publish published=5000,target=5000 registry:2 > /dev/null
-      SCRIPT
+      shell.inline = "docker service create --name registry --publish published=5000,target=5000 registry:2 > /dev/null"
+    end
+    
+    # A script (deploy_stack.sh) will be started and running in the background to wait for the other nodes in the swam to join
+    # so to deploy the stack. It takse as un argguments the name of the stack, compose file and numeber of expected nodes.
+    m.vm.provision "Waiting for nodes", type: "shell" do |shell|
+      shell.inline = "nohup bash #{shared_dir}/deploy_stack.sh #{service_name} #{shared_dir}/app/docker-compose.yml #{machines.size} &> #{shared_dir}/deploy.out& sleep 1"
     end
 
     m.vm.network "forwarded_port", guest: 8001, host: 8001, protocol: "tcp", auto_correct: true, id: "api"
@@ -124,19 +129,3 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
 end
-
-# Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-#   config.trigger.after :up do |trigger|
-#     trigger.name = "Hello world"
-#     trigger.info = "I am running after vagrant up!!"
-#     trigger.run = { inline: "vagrant ssh  #{manager.hostname} -c '/bin/bash #{shared_dir}/start_service.sh #{service_name} #{shared_dir}/app/docker-compose.yml #{workers.size}'", }
-#   end
-# end
-
-
-$build_script = <<-SCRIPT
-  docker service create --name registry --publish published=5000,target=5000 registry:2
-  curl http://localhost:5000/v2/
-  docker-compose -f #{shared_dir}/app/docker-compose build && docker-compose push
-  docker-compose pull && docker stack deploy -c <(docker-compose config) autostack
-SCRIPT
