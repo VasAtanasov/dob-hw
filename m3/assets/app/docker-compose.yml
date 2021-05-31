@@ -9,6 +9,9 @@ services:
         ports:
             - "3001:80"
         restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+        environment:
+            - REACT_APP_API_PORT=${API_PORT}
+            - PORT=${API_PORT}
         deploy:
             mode: replicated
             replicas: 3
@@ -21,19 +24,20 @@ services:
             context: ./api
             dockerfile: Dockerfile
         restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
-        environment: 
+        environment:
+            - PORT=${API_PORT}
             - DB_URL=${DB_URL}
             - DB_NAME=${DB_NAME}
             - DB_USERNAME=${DB_USERNAME}
             - DB_PASSWORD=${DB_PASSWORD}
         healthcheck:
-            test: "${DOCKER_API_HEALTHCHECK_TEST:-curl localhost:8007/up}"
-            interval: "20s"
-            timeout: "15s"
-            start_period: "15s"
-            retries: 3
+            test: "${DOCKER_API_HEALTHCHECK_TEST:-curl localhost:8001/up}"
+            interval: "25s"
+            timeout: "3s"
+            start_period: "40s"
+            retries: 5
         ports:
-            - "8007:8007"
+            - "8001:8001"
         networks:
             - frontend
             - backend

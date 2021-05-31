@@ -12,8 +12,7 @@ public interface CarRepository extends JpaRepository<Car, Integer> {
 
   @Query(
       value =
-          "SELECT * FROM CAR WHERE MATCH(`MAKER`, `MODEL`,`YEAR`, `TRIM`) "
-              + "AGAINST(:searchString IN BOOLEAN MODE)",
+          "SELECT * FROM CAR AS c WHERE CONCAT_WS('', c.MAKER, c.MODEL, c.YEAR, c.TRIM) LIKE :searchString",
       nativeQuery = true)
   Page<Car> fetchCars(String searchString, Pageable page);
 }

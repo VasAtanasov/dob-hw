@@ -24,7 +24,7 @@ public class SearchController {
   public ResponseEntity<Page<CarsResponse>> searchCar(
       @RequestParam(defaultValue = "") String q,
       @PageableDefault(size = DEFAULT_PAGE_SIZE) Pageable pageable) {
-    String searchString = q.isBlank() ? "" : String.format("*%s*", q);
+    String searchString = q.isBlank() ? "" : "%" + q + "%";
     Page<CarsResponse> cars = carRepository.fetchCars(searchString, pageable).map(CarsResponse::of);
     return ResponseEntity.ok(cars);
   }

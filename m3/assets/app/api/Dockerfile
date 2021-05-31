@@ -22,7 +22,7 @@ FROM amazoncorretto:11-alpine as runtime
 
 RUN apk --no-cache add curl
 
-EXPOSE 8007
+EXPOSE $PORT
 
 #Set app home folder
 ENV APP_HOME /app

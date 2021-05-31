@@ -18,6 +18,9 @@ RUN npm install react-scripts@3.2.0 -g --silent
 # Copy the main application
 COPY . ./
 
+ARG REACT_APP_API_PORT
+ENV REACT_APP_API_PORT=$PORT
+
 # Build the application
 RUN npm run build 
 

@@ -95,10 +95,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       shell.inline = "docker swarm init --advertise-addr #{manager.ip}"
     end
 
-    m.vm.provision "Create docker registry", type: "shell" do |shell|
-      shell.inline = "docker service create --name registry --publish published=5000,target=5000 registry:2 > /dev/null"
-    end
-
     m.vm.provision "Extract worker tocken", type: "shell" do |shell|
       shell.inline = "docker swarm join-token -q worker > #{shared_dir}/worker_token"
     end
@@ -107,7 +103,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       shell.inline = "docker swarm join-token -q manager > #{shared_dir}/manager_token"
     end
 
-    m.vm.network "forwarded_port", guest: 8007, host: 8007, protocol: "tcp", auto_correct: true, id: "api"
+    m.vm.provision "Create local docker registry", type: "shell" do |shell|
+      shell.inline = <<-SCRIPT
+        docker service create --name registry --publish published=5000,target=5000 registry:2 > /dev/null
+      SCRIPT
+    end
+
+    m.vm.network "forwarded_port", guest: 8001, host: 8001, protocol: "tcp", auto_correct: true, id: "api"
     m.vm.network "forwarded_port", guest: 3001, host: 3001, protocol: "tcp", auto_correct: true, id: "nginx"
     m.vm.network "forwarded_port", guest: 8008, host: 8008, protocol: "tcp", auto_correct: true, id: "adminer"
     m.vm.network "forwarded_port", guest: 3306, host: 3307, protocol: "tcp", auto_correct: true, id: "db"
@@ -135,7 +137,6 @@ end
 $build_script = <<-SCRIPT
   docker service create --name registry --publish published=5000,target=5000 registry:2
   curl http://localhost:5000/v2/
-  docker-compose build
-  docker-compose push
-  docker stack deploy -c <(docker-compose config) autostack
+  docker-compose -f #{shared_dir}/app/docker-compose build && docker-compose push
+  docker-compose pull && docker stack deploy -c <(docker-compose config) autostack
 SCRIPT
