@@ -6,7 +6,11 @@ The only thing that needs to be executed is `vagrant up` and the machines will b
 
 In settings.yml are located variables for the virtual machines and swarm settings.
 
-When the main(manager) machines is up a script will be executed in the background to wait for the specified number of nodes to join the swarm so the application to be deployed.
+When the main(manager) machines is up a script with `nohup` will be executed in the background to wait for the specified number of nodes to join the swarm so the application to be deployed.
+
+You can check the progress of the script in the assets/deploy.out file.
+
+It can take some time for all services to be healthy and running.
 
 The web page is on <http://localhost:3001>
 

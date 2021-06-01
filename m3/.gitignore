@@ -3,5 +3,6 @@
 .vagrant
 .idea
 *.log
+*.out
 assets/*_token
 assets/hosts

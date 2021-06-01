@@ -1,11 +1,21 @@
 #!/bin/bash
 
 stack_name=$1
-compose_file=$2
+app_dir=$2
 expected_worker_count=$3
 
+compose_file="$app_dir/docker-compose.yml"
+
+# The location of docker-compose.yml configuration(s) 
+echo "==> Changing location to $app_dir"
+cd $app_dir
+
 echo "==> Compose file configuration"
-docker-compose -f $compose_file config
+docker-compose config
+docker-compose build && docker-compose push
+
+_pid=$!
+echo $_pid
 
 while :
 do
@@ -14,14 +24,15 @@ do
   current_node_count="$(($workers_current_count + $managers_current_count - 1))"
   if [ "$expected_worker_count" == "$current_node_count" ]; then
     echo "All nodes online boostraping stack [ $stack_name ]"
-    docker-compose -f $compose_file build && docker-compose -f $compose_file push
-    # The -c <(docker-compose -f docker-compose.yml config) is used to load all envs from the .env file and
+    # The -c <(docker-compose config) is used to load all envs from the .env file and
     # to join configurations from other compose files.
-    docker-compose -f $compose_file pull && docker stack deploy -c <(docker-compose -f $compose_file config) $stack_name
+    docker-compose pull && docker stack deploy -c <(docker-compose config) $stack_name
     break
   else
     waiting_for="$(($expected_worker_count - $current_node_count))"
     echo "Waiting for ${waiting_for} nodes to connect"
+    sleep 5
   fi
-  sleep 5
 done
+
+echo "==> Stack is deployed"

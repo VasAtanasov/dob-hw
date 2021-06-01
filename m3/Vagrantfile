@@ -109,15 +109,21 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
     
     # A script (deploy_stack.sh) will be started and running in the background to wait for the other nodes in the swam to join
-    # so to deploy the stack. It takse as un argguments the name of the stack, compose file and numeber of expected nodes.
+    # so to deploy the stack. It takse as un argguments the name of the stack, location of the compose file(s) and numeber of expected nodes.
+    # You can check the progress in the log file assets/deploy.out
     m.vm.provision "Waiting for nodes", type: "shell" do |shell|
-      shell.inline = "nohup bash #{shared_dir}/deploy_stack.sh #{service_name} #{shared_dir}/app/docker-compose.yml #{machines.size} &> #{shared_dir}/deploy.out& sleep 1"
+      shell.inline = "nohup bash #{shared_dir}/deploy_stack.sh #{service_name} #{shared_dir}/app #{machines.size} &> #{shared_dir}/deploy.out& sleep 1"
     end
 
     m.vm.network "forwarded_port", guest: 8001, host: 8001, protocol: "tcp", auto_correct: true, id: "api"
     m.vm.network "forwarded_port", guest: 3001, host: 3001, protocol: "tcp", auto_correct: true, id: "nginx"
     m.vm.network "forwarded_port", guest: 8008, host: 8008, protocol: "tcp", auto_correct: true, id: "adminer"
     m.vm.network "forwarded_port", guest: 3306, host: 3307, protocol: "tcp", auto_correct: true, id: "db"
+
+    m.trigger.before :destroy do |trigger|
+      trigger.warn = "Cleaning up"
+      trigger.run = { inline: "rm #{vagrant_assets}/manager_token; rm #{vagrant_assets}/worker_token; rm #{vagrant_assets}/hosts; rm #{vagrant_assets}/*.out" }
+    end
   end
 
   machines.each.with_index(1) do |machine, index|
