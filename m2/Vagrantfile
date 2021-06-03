@@ -12,18 +12,18 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.ssh.insert_key = false
 
   config.vm.define "dobdocker" do |dobdocker|
-    dobdocker.vm.box = "vasatanasov/ubuntu-dob"
+    dobdocker.vm.box = "ubuntu/focal64"
     dobdocker.vm.hostname = "docker.dob.lab"
     dobdocker.vm.network "private_network", ip: "192.168.89.100"
     dobdocker.vm.network "forwarded_port", guest: 8080, host: 8080, auto_correct: true
 
     dobdocker.vm.provision :shell do |shell|
-      shell.path = "https://raw.githubusercontent.com/VasAtanasov/scripts/main/docker-dev/docker.sh"
+      shell.path = "https://raw.githubusercontent.com/VasAtanasov/vagrant-boxes/scripts/main/docker-dev/docker.sh"
     end
 
     dobdocker.vm.provision :shell do |shell|
       shell.env = { 'CURRENT_USER' => 'vagrant'}
-      shell.path = "https://raw.githubusercontent.com/VasAtanasov/scripts/main/docker-dev/docker-group.sh"
+      shell.path = "https://raw.githubusercontent.com/VasAtanasov/vagrant-boxes/scripts/main/docker-dev/docker-group.sh"
     end
 
     dobdocker.vm.provision :shell, :inline => $run_container

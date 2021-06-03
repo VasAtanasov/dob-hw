@@ -1,0 +1,52 @@
+---
+- hosts: webservers
+  # remote_user: vagrant
+  become: yes
+  # become_user: root
+
+  tasks:
+      - name: Ubuntu - Install Apache HTTP Server
+        apt:
+            name: apache2
+            state: present
+            update_cache: yes
+
+      - name: Ubuntu - Start and Enable Apache HTTP Server
+        service:
+            name: apache2
+            state: started
+            enabled: true
+
+- hosts: dbservers
+  # remote_user: vagrant
+  become: yes
+  # become_user: root
+
+  tasks:
+      - name: Install Utility software
+        apt:
+            name:
+                - software-properties-common
+                - dirmngr
+            state: latest
+
+      - name: Add repository key to the system
+        apt_key:
+            url: https://mariadb.org/mariadb_release_signing_key.asc
+            state: present
+
+      - name: Install MariaDB repository
+        apt_repository:
+            repo: "deb [arch=amd64,arm64,ppc64el] https://mirrors.nxthost.com/mariadb/repo/10.5/ubuntu focal main"
+            state: present
+            filename: mariadb
+        register: addmariadbrepo
+
+      - name: Install MariaDB Server
+        apt:
+            name:
+                - mariadb-server
+                - mariadb-common
+                - python-openssl
+                - python3-mysqldb
+            state: latest
