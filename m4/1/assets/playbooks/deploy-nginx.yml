@@ -1,0 +1,11 @@
+- hosts: all
+  become: true
+  vars:
+      default_container_name: nginx
+      default_container_image: nginx
+      nginx_exposed_ports:
+          - "80"
+      nginx_published_ports:
+          - "80:80"
+  roles:
+      - install-deploy-nginx

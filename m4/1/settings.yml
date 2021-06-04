@@ -1,0 +1,25 @@
+VAGRANTFILE_API_VERSION: "2"
+
+###################
+# VMs (vagrant) settings
+###################
+
+default: &DEFAULT
+    box: "vasatanasov/ubuntu-2004-ansible"
+    cpu: 1
+    memory: 1024
+    vram: 128
+    synced_folder: "/home/vagrant/shared"
+
+machines:
+    ans:
+        <<: *DEFAULT
+        hostname: "ans.dob.lab"
+        network:
+            # Private/Host-only network
+            private:
+                address: 192.168.98.99
+                netmask: 192.168.98.0/24
+        forwarded_port:
+            - guest: 80
+              host: 8080

@@ -5,19 +5,17 @@ VAGRANTFILE_API_VERSION: "2"
 ###################
 
 default: &DEFAULT
-    box: "ubuntu/focal64"
-    # box: "vasatanasov/ubuntu-2004-server"
-    # box:  "shekeriev/ubuntu-20-04-server"
+    box: "vasatanasov/ubuntu-2004-ansible"
     cpu: 1
     memory: 1024
-    vram: 128
+    vram: 16
     synced_folder: "/home/vagrant/shared"
 
 machines:
     ans:
         <<: *DEFAULT
         # box: "ubuntu-2004-ansible"
-        hostname: "ans.dob.lab"
+        hostname: "dob-ans"
         network:
             # Private/Host-only network
             private:
@@ -26,7 +24,7 @@ machines:
     web:
         <<: *DEFAULT
         # box: "shekeriev/ubuntu-20-04-server"
-        hostname: "web.dob.lab"
+        hostname: "dob-web"
         network:
             # Private/Host-only network
             private:
@@ -37,17 +35,9 @@ machines:
               host: 8080
     db:
         <<: *DEFAULT
-        hostname: "db.dob.lab"
+        hostname: "dob-db"
         network:
             # Private/Host-only network
             private:
                 address: 192.168.98.101
-                netmask: 192.168.98.0/24
-    clnt:
-        <<: *DEFAULT
-        hostname: "clnt.dob.lab"
-        network:
-            # Private/Host-only network
-            private:
-                address: 192.168.98.102
                 netmask: 192.168.98.0/24

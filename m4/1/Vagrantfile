@@ -1,0 +1,72 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'yaml'
+
+settings_file = File.expand_path('settings.yml')
+
+if File.exist? settings_file then
+  settings = YAML.load_file settings_file
+else
+  abort "settings.yml was not found"
+end
+
+vagrant_assets = File.expand_path('assets')
+if ! File.exists? vagrant_assets then
+  vagrant_assets = File.expand_path(Dir.pwd)
+end
+
+VAGRANTFILE_API_VERSION = settings['VAGRANTFILE_API_VERSION'] || "2"
+
+machine_name = 'ans'
+machine = settings['machines'][machine_name]
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.insert_key = false
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  machine_hostname = machine['hostname']
+  shared_dir = machine['synced_folder']
+
+  config.vm.define machine_name do |m|
+    m.vm.box = machine['box']
+    m.vm.hostname = machine_hostname
+
+    #################
+    # Networking :: private
+    #################b 
+    m.vm.network "private_network", ip: "#{machine['network']['private']['address']}"
+
+    m.vm.provider "virtualbox" do |vb, override|
+      vb.name = machine_name
+      vb.memory = machine['memory']
+      vb.cpus = machine['cpu']
+      
+      vb.customize ["modifyvm", :id, "--vram",               machine['vram']]
+
+      vb.check_guest_additions = false
+      
+      override.vm.synced_folder "#{vagrant_assets}", "#{shared_dir}"
+    end
+
+    #################
+    # Port forwarding
+    #################
+    if machine.include? 'forwarded_port'
+      machine["forwarded_port"].each do |port|
+        m.vm.network "forwarded_port", guest: port["guest"], host: port["host"], auto_correct: true
+      end
+    end
+    
+
+    m.vm.provision "bootstrap", type: "shell" do |s|
+      s.inline = "#{shared_dir}/bootstrap.sh"
+    end
+    
+  end
+
+end
