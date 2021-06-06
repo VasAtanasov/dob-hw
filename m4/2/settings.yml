@@ -7,29 +7,26 @@ VAGRANTFILE_API_VERSION: "2"
 default: &DEFAULT
     box: "vasatanasov/ubuntu-2004-ansible"
     cpu: 1
-    memory: 1024
+    memory: 2048
     vram: 16
     synced_folder: "/home/vagrant/shared"
 
 machines:
     ans:
         <<: *DEFAULT
-        # box: "ubuntu-2004-ansible"
         hostname: "dob-ans"
         network:
             # Private/Host-only network
             private:
-                address: 192.168.98.99
-                netmask: 192.168.98.0/24
+                address: 192.168.11.153
     web:
         <<: *DEFAULT
-        # box: "shekeriev/ubuntu-20-04-server"
+        box: "shekeriev/centos-8-minimal"
         hostname: "dob-web"
         network:
             # Private/Host-only network
             private:
-                address: 192.168.98.100
-                netmask: 192.168.98.0/24
+                address: 192.168.11.155
         forwarded_port:
             - guest: 80
               host: 8080
@@ -39,5 +36,12 @@ machines:
         network:
             # Private/Host-only network
             private:
-                address: 192.168.98.101
-                netmask: 192.168.98.0/24
+                address: 192.168.11.157
+    db2:
+        <<: *DEFAULT
+        box: "shekeriev/centos-8-minimal"
+        hostname: "dob2-db"
+        network:
+            # Private/Host-only network
+            private:
+                address: 192.168.11.159

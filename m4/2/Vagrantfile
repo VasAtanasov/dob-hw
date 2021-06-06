@@ -29,28 +29,6 @@ File.open("#{vagrant_assets}/hosts", 'w') { |file|
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.ssh.insert_key = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  # config.ssh.keep_alive = true
-  # config.ssh.forward_agent = true
-
-  if Vagrant.has_plugin?("vagrant-vbguest") then
-    config.vbguest.auto_update = false
-  end
-
-  config.vm.provision "Enable password authentication for ssh", type: "shell" do |shell|
-    shell.inline = <<-SCRIPT
-        sed -i '/.*PasswordAuthentication.*/d' /etc/ssh/sshd_config
-        echo 'PasswordAuthentication yes' | tee -a /etc/ssh/sshd_config > /dev/null
-        service sshd restart
-        service sshd status
-      SCRIPT
-  end
-
-  # Some times ansible complines that cannot find a packages.
-  config.vm.provision "Apt udate", type: "shell" do |shell|
-    shell.inline = <<-SCRIPT
-        apt-get update
-      SCRIPT
-  end
 
   machines.each do |machine_name, machine|
     machine_hostname = machine['hostname']
@@ -96,9 +74,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       
       if machine_name == "ans"
       
-        m.vm.provision "bootstrap", type: "shell" do |s|
-          s.inline = "#{shared_dir}/provision/bootstrap.sh"
-        end
+        # m.vm.provision "bootstrap", type: "shell" do |s|
+        #   s.inline = "#{shared_dir}/provision/bootstrap.sh"
+        # end
       
         m.trigger.before :destroy do |trigger|
           trigger.warn = "Cleaning up"

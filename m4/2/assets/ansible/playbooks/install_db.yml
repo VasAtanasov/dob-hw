@@ -1,0 +1,7 @@
+---
+- hosts: dbservers
+  become: true
+  tasks:
+      - name: install db
+        include_role:
+            name: install_db
