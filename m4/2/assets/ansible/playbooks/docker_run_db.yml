@@ -1,0 +1,32 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts: dbservers
+  vars:
+      docker_volume: db_data
+      docker_network: web_net
+      db_name: bulgaria
+  tasks:
+      - name: "Create a Volume"
+        docker_volume:
+            name: "{{ docker_volume }}"
+
+      - name: "Create a network"
+        include_role:
+            name: add-docker-network
+
+      - name: "Launch database container"
+        docker_container:
+            name: "{{ db_name }}"
+            image: mariadb:10.6
+            volumes:
+                - "{{ docker_volume }}:/var/lib/mysql:rw"
+                - /home/vagrant/shared/db:/docker-entrypoint-initdb.d
+            restart_policy: always
+            network_mode: "{{ docker_network }}"
+            env:
+                MYSQL_ROOT_PASSWORD: root
+                MYSQL_DATABASE: bulgaria
+                MYSQL_USER: web_user
+                MYSQL_PASSWORD: Password1
+            ports:
+                - "3306:3306"

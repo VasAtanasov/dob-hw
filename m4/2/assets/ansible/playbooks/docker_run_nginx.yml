@@ -1,0 +1,27 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts: webservers
+  vars:
+      docker_network: web_net
+  tasks:
+      - name: "Create a network"
+        include_role:
+            name: add-docker-network
+
+      - name: Install Nginx
+        docker_container:
+            name: nginx
+            image: nginx
+            ports:
+                - 80:80
+            network_mode: "{{ docker_network }}"
+            volumes:
+                - /home/vagrant/shared/web/nginx-config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+                - /home/vagrant/shared/web/app:/app
+      - name: Install Php
+        docker_container:
+            name: fpm
+            image: php:7.3-fpm-alpine
+            network_mode: "{{ docker_network }}"
+            volumes:
+                - /home/vagrant/shared/web/app:/app

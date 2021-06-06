@@ -61,22 +61,28 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       #################
       if machine.include? 'forwarded_port'
         machine["forwarded_port"].each do |port|
-          m.vm.network "forwarded_port", guest: port["guest"], host: port["host"], auto_correct: true
+          m.vm.network "forwarded_port", guest: port["guest"], host: port["host"], auto_correct: port["auto_correct"], id: port["id"]
         end
 
       end
 
+      #################
+      # List hosts
+      #################
       if File.file?("#{vagrant_assets}/hosts") 
         m.vm.provision "===> Appendig hosts to #{machine_hostname} /etc/hosts", type: "shell" do |shell| 
           shell.inline = "cat #{machine['synced_folder']}/hosts >> /etc/hosts"
         end
       end
-      
+
+      #################
+      # Run playbooks and configure machines
+      #################
       if machine_name == "ans"
       
-        # m.vm.provision "bootstrap", type: "shell" do |s|
-        #   s.inline = "#{shared_dir}/provision/bootstrap.sh"
-        # end
+        m.vm.provision "bootstrap", type: "shell" do |s|
+          s.inline = "#{shared_dir}/bootstrap.sh"
+        end
       
         m.trigger.before :destroy do |trigger|
           trigger.warn = "Cleaning up"

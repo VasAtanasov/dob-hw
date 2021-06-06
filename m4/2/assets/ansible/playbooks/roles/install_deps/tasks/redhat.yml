@@ -1,0 +1,8 @@
+---
+- name: Install required system packages
+  yum: name={{ item }} state=latest
+  loop: ["epel-release", "python3"]
+
+- name: Install Docker Module for Python
+  pip:
+      name: docker-py

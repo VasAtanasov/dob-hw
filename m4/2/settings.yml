@@ -12,13 +12,6 @@ default: &DEFAULT
     synced_folder: "/home/vagrant/shared"
 
 machines:
-    ans:
-        <<: *DEFAULT
-        hostname: "dob-ans"
-        network:
-            # Private/Host-only network
-            private:
-                address: 192.168.11.153
     web:
         <<: *DEFAULT
         box: "shekeriev/centos-8-minimal"
@@ -30,6 +23,8 @@ machines:
         forwarded_port:
             - guest: 80
               host: 8080
+              auto_correct: true
+              id: "app"
     db:
         <<: *DEFAULT
         hostname: "dob-db"
@@ -37,11 +32,23 @@ machines:
             # Private/Host-only network
             private:
                 address: 192.168.11.157
-    db2:
+        forwarded_port:
+            - guest: 3306
+              host: 3307
+              auto_correct: true
+              id: "db"
+    ans:
         <<: *DEFAULT
-        box: "shekeriev/centos-8-minimal"
-        hostname: "dob2-db"
+        hostname: "dob-ans"
         network:
             # Private/Host-only network
             private:
-                address: 192.168.11.159
+                address: 192.168.11.153
+    # db2:
+    #     <<: *DEFAULT
+    #     box: "shekeriev/centos-8-minimal"
+    #     hostname: "dob2-db"
+    #     network:
+    #         # Private/Host-only network
+    #         private:
+    #             address: 192.168.11.159
