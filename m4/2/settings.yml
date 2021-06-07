@@ -14,10 +14,8 @@ default: &DEFAULT
 machines:
     web:
         <<: *DEFAULT
-        box: "shekeriev/centos-8-minimal"
         hostname: "dob-web"
         network:
-            # Private/Host-only network
             private:
                 address: 192.168.11.155
         forwarded_port:
@@ -28,8 +26,8 @@ machines:
     db:
         <<: *DEFAULT
         hostname: "dob-db"
+        box: "shekeriev/centos-8-minimal"
         network:
-            # Private/Host-only network
             private:
                 address: 192.168.11.157
         forwarded_port:
@@ -41,14 +39,5 @@ machines:
         <<: *DEFAULT
         hostname: "dob-ans"
         network:
-            # Private/Host-only network
             private:
                 address: 192.168.11.153
-    # db2:
-    #     <<: *DEFAULT
-    #     box: "shekeriev/centos-8-minimal"
-    #     hostname: "dob2-db"
-    #     network:
-    #         # Private/Host-only network
-    #         private:
-    #             address: 192.168.11.159

@@ -31,10 +31,11 @@
    $database = "bulgaria";
    $user = "web_user";
    $password  = "Password1";
-   $host = "192.168.11.157:3307";
+   $host = "dob-db";
+   $port = 3306;
 
    try {
-      $connection = new PDO("mysql:host={$host};dbname={$database};charset=utf8", $user, $password);
+      $connection = new PDO("mysql:host={$host};port={$port};dbname={$database};charset=utf8", $user, $password);
       $query = $connection->query("SELECT city_name, population FROM cities ORDER BY population DESC");
       $cities = $query->fetchAll();
 
@@ -47,6 +48,7 @@
       }
    }
    catch (PDOException $e) {
+      print $e;
       print "<tr><td>Няма връзка към базата. Опитайте отново.</td></tr>\n";
    }
 ?>

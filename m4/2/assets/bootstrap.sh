@@ -39,6 +39,12 @@ ANSIBLE_EXTRA_VARS=""
 
 # run ansible
 ansible-galaxy install geerlingguy.docker
-ansible-playbook "$SCRIPT_DIR/ansible/playbooks/install-deps.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
-ansible-playbook "$SCRIPT_DIR/ansible/playbooks/install-docker.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
+ansible-playbook "$SCRIPT_DIR/ansible/playbooks/install_deps.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
+ansible-playbook "$SCRIPT_DIR/ansible/playbooks/install_docker.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
 ansible-playbook "$SCRIPT_DIR/ansible/playbooks/docker_run_db.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
+ansible-playbook "$SCRIPT_DIR/ansible/playbooks/docker_run_nginx.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
+
+echo " ***************************************************************************** "
+echo " *** curl dob-web"
+echo " ***************************************************************************** "
+curl dob-web

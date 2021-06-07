@@ -4,5 +4,5 @@
   loop: ["epel-release", "python3"]
 
 - name: Install Docker Module for Python
-  pip:
-      name: docker-py
+  pip: name={{ item }}
+  loop: ["docker-py"]
