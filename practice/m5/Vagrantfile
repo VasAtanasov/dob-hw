@@ -81,10 +81,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         end
       end
 
-      m.trigger.before :destroy do |trigger|
-        trigger.warn = "Cleaning up"
-        trigger.run = { inline: "rm #{vagrant_assets}/hosts;" }
-      end
+      # m.trigger.before :destroy do |trigger|
+      #   trigger.warn = "Cleaning up"
+      #   trigger.run = { inline: "rm #{vagrant_assets}/hosts;" }
+      # end
       
     end
 
