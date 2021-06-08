@@ -1,0 +1,93 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'yaml'
+
+settings_file = File.expand_path('settings.yml')
+
+if File.exist? settings_file then
+  settings = YAML.load_file settings_file
+else
+  abort "settings.yml was not found"
+end
+
+vagrant_assets = File.expand_path('assets')
+if ! File.exists? vagrant_assets then
+  vagrant_assets = File.expand_path(Dir.pwd)
+end
+
+VAGRANTFILE_API_VERSION = settings['VAGRANTFILE_API_VERSION'] || "2"
+
+machines = settings['machines']
+
+File.open("#{vagrant_assets}/hosts", 'w') { |file| 
+  machines.each do |machine_name, opts|
+    file.write("#{opts['network']['private']['address']} #{opts['hostname']} #{machine_name}\n")
+  end
+}
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.insert_key = false
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  machines.each do |machine_name, machine|
+    machine_hostname = machine['hostname']
+    shared_dir = machine['synced_folder']
+
+    config.vm.define machine_name do |m|
+      m.vm.box = machine['box']
+      m.vm.hostname = machine_hostname
+
+      #################
+      # Networking :: private
+      #################b 
+      m.vm.network "private_network", ip: "#{machine['network']['private']['address']}"
+
+      m.vm.provider "virtualbox" do |vb, override|
+        vb.name = machine_name
+        vb.memory = machine['memory']
+        vb.cpus = machine['cpu']
+        
+        vb.customize ["modifyvm", :id, "--vram",               machine['vram']]
+        vb.customize ["modifyvm", :id, "--groups",             "/ansible_vms"]
+
+        vb.check_guest_additions = false
+        
+        override.vm.synced_folder "#{vagrant_assets}", "#{shared_dir}"
+      end
+
+      #################
+      # Provisioning
+      #################
+      m.vm.provision "boostrap", type: "shell" do |shell|
+        shell.path = "#{vagrant_assets}/bootstrap.sh"
+      end
+
+      #################
+      # Port forwarding
+      #################
+      if machine.include? 'forwarded_port'
+        machine["forwarded_port"].each do |port|
+          m.vm.network "forwarded_port", guest: port["guest"], host: port["host"], auto_correct: port["auto_correct"], id: port["id"]
+        end
+      end
+
+      #################
+      # List hosts
+      #################
+      if File.file?("#{vagrant_assets}/hosts") 
+        m.vm.provision "===> Appendig hosts to #{machine_hostname} /etc/hosts", type: "shell" do |shell| 
+          shell.inline = "cat #{machine['synced_folder']}/hosts >> /etc/hosts"
+        end
+      end
+
+      m.trigger.before :destroy do |trigger|
+        trigger.warn = "Cleaning up"
+        trigger.run = { inline: "rm #{vagrant_assets}/hosts;" }
+      end
+      
+    end
+
+  end
+
+end

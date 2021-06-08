@@ -1,0 +1,35 @@
+VAGRANTFILE_API_VERSION: "2"
+
+###################
+# VMs (vagrant) settings
+###################
+
+default: &DEFAULT
+    box: "ubuntu/focal64"
+    cpu: 1
+    memory: 2048
+    vram: 16
+    synced_folder: "/home/vagrant/shared"
+
+machines:
+    master:
+        <<: *DEFAULT
+        hostname: "master.dob.lab"
+        network:
+            private:
+                address: 192.168.99.100
+        forwarded_port:
+            - guest: 80
+              host: 8000
+              auto_correct: true
+              id: "app"
+            - guest: 8080
+              host: 8080
+              auto_correct: true
+              id: "app"
+    client:
+        <<: *DEFAULT
+        hostname: "client.dob.lab"
+        network:
+            private:
+                address: 192.168.99.101
