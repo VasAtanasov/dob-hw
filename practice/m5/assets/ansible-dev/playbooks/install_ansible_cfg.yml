@@ -1,0 +1,8 @@
+# Configures Ansible - needs to be executed once after Ansible is installed for the first time
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: include install_ansible_cfg
+    include_role:
+      name: install_ansible_cfg

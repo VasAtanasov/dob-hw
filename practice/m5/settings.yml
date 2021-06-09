@@ -4,17 +4,24 @@ VAGRANTFILE_API_VERSION: "2"
 # VMs (vagrant) settings
 ###################
 
-default: &DEFAULT
+x-common-scripts: &COMMON_SCRIPTS
+    common_scripts:
+        - file: bootstrap.sh
+          args: []
+
+x-default: &DEFAULT
     box: "ubuntu/focal64"
     cpu: 1
     memory: 2048
     vram: 16
     synced_folder: "/home/vagrant/shared"
+    <<: *COMMON_SCRIPTS
+    scripts: []
 
 machines:
     master:
         <<: *DEFAULT
-        hostname: "master.dob.lab"
+        hostname: "master.dob"
         network:
             private:
                 address: 192.168.99.100
@@ -27,9 +34,21 @@ machines:
               host: 8080
               auto_correct: true
               id: "app"
+
     client:
         <<: *DEFAULT
-        hostname: "client.dob.lab"
+        hostname: "client.dob"
         network:
             private:
                 address: 192.168.99.101
+
+    ansible:
+        <<: *DEFAULT
+        box: "vasatanasov/ubuntu-2004-ansible"
+        hostname: "ansible.dob"
+        network:
+            private:
+                address: 192.168.99.99
+        scripts:
+            - file: ansible.sh
+              args: ["/home/vagrant/shared"]

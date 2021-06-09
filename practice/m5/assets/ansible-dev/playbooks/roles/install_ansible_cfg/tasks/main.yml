@@ -1,0 +1,33 @@
+---
+- name: set current inventory as default
+  replace:
+    path: /etc/ansible/ansible.cfg
+    regexp: '^#host_key_checking = False$'
+    replace: 'host_key_checking = False'
+    backup: yes
+  become: true
+
+- name: set current inventory as default
+  replace:
+    path: /etc/ansible/ansible.cfg
+    regexp: '^#inventory      = /etc/ansible/hosts$'
+    replace: 'inventory      = {{inventory_dir}}/inventory.ini'
+    backup: yes
+  become: true
+
+- name: create log directory
+  file: "state=directory path={{inventory_dir}}/log/"
+
+- name: ensure ansible.log file exists
+  copy:
+    content: ""
+    dest: '{{inventory_dir}}/log/ansible.log'
+    force: no
+
+- name: set log folder in config
+  replace:
+    path: /etc/ansible/ansible.cfg
+    regexp: '^#log_path = /var/log/ansible.log$'
+    replace: 'log_path = {{inventory_dir}}/log/ansible.log'
+    backup: yes
+  become: true
