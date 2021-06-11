@@ -1,0 +1,4 @@
+---
+java_home: ""
+java_packages:
+    - openjdk-11-jdk

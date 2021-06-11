@@ -2,6 +2,7 @@
 # vi: set ft=ruby :
 
 require 'yaml'
+require_relative 'lib/dynamic_inventory'
 
 settings_file = File.expand_path('settings.yml')
 
@@ -11,8 +12,6 @@ else
   abort "settings.yml was not found"
 end
 
-# puts settings
-
 vagrant_assets = File.expand_path('assets')
 if ! File.exists? vagrant_assets then
   vagrant_assets = File.expand_path(Dir.pwd)
@@ -20,9 +19,10 @@ end
 
 VAGRANTFILE_API_VERSION = settings['VAGRANTFILE_API_VERSION'] || "2"
 
-machines = settings['machines']
-inventory = machines.reject {|key,_| key == "ansible" }
-
+# machines = settings['machines']
+machines = generate_machines(settings['machines'])
+inventory_machines = machines.select {|m| m.name != "ansible" }
+inventory = get_inventory(inventory_machines)
 
 ANSIBLE_INVENTORY_FILE = "#{vagrant_assets}/ansible-dev/inventory.ini"
 # create empty inventory file
@@ -30,40 +30,45 @@ File.open("#{ANSIBLE_INVENTORY_FILE}" ,'w') do | f |
   f.write ""
 end
 
-# add all hosts to invenotry.ini file
-inventory.each do |machine_name, machine|
-  File.open("#{ANSIBLE_INVENTORY_FILE}" ,'a') do | f |
-    f.write "[#{machine_name}]\n"
-    f.write "#{machine['network']['private']['address']} ansible_ssh_port=22 ansible_ssh_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3\n\n"
+def add_host(file, machine)
+  File.open("#{file}" ,'a') do | f |
+    f.write "[#{machine.name}]\n"
+    f.write "#{machine.hostname} ansible_host=#{machine.ip} ansible_ssh_port=22 ansible_ssh_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3\n\n"
   end
+end
+
+# add all hosts to invenotry.ini file
+inventory_machines.each do |machine|
+  add_host(ANSIBLE_INVENTORY_FILE, machine)
 end
 
 #################
 # Hosts for /etc/hosts
 #################
 hosts="\n"
-machines.each do |machine_name, opts|
-  hosts += "#{opts['network']['private']['address']} #{opts['hostname']} #{machine_name}\n"
+machines.each do |machine|
+  hosts += "#{machine.ip} #{machine.hostname} #{machine.name}\n"
 end
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.ssh.insert_key = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
 
-  machines.each do |machine_name, machine|
-    machine_hostname = machine['hostname']
-    shared_dir = machine['synced_folder']
+  machines.each do |machine|
+    machine_name = machine.name
+    machine_hostname = machine.hostname
+    shared_dir = machine.synced_folder
 
     config.vm.define machine_name do |m|
-      m.vm.box = machine['box']
+      m.vm.box = machine.box
       m.vm.hostname = machine_hostname
 
       m.vm.provider "virtualbox" do |vb, override|
         vb.name = machine_name
-        vb.memory = machine['memory']
-        vb.cpus = machine['cpu']
+        vb.memory = machine.memory
+        vb.cpus = machine.cpu
         
-        vb.customize ["modifyvm", :id, "--vram",               machine['vram']]
+        vb.customize ["modifyvm", :id, "--vram",               machine.vram]
         vb.customize ["modifyvm", :id, "--groups",             "/m5"]
 
         vb.check_guest_additions = false
@@ -74,15 +79,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       #################
       # Networking :: private
       #################
-      m.vm.network "private_network", ip: "#{machine['network']['private']['address']}"
+      m.vm.network "private_network", ip: "#{machine.ip}"
 
       #################
       # Port forwarding
       #################
-      if machine.include? 'forwarded_port'
-        machine["forwarded_port"].each do |port|
-          m.vm.network "forwarded_port", guest: port["guest"], host: port["host"], auto_correct: port["auto_correct"], id: port["id"]
-        end
+      machine.forwarded_port.each do |port|
+        m.vm.network "forwarded_port", guest: port["guest"], host: port["host"], auto_correct: port["auto_correct"], id: port["id"]
       end
 
       #################
@@ -97,8 +100,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       #################
       # Provisioning
       #################
-      scripts = machine['common_scripts'] + machine['scripts']
-      scripts.each do |script|
+      machine.scripts.each do |script|
         m.vm.provision "#{script}", type: "shell" do |shell|
           shell.path = "#{vagrant_assets}/#{script['file']}"
           if script.has_key?('args')

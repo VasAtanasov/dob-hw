@@ -4,5 +4,6 @@
 .idea
 *.log
 *.out
+log
 assets/*_token
 assets/hosts

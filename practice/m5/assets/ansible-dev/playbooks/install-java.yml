@@ -1,0 +1,7 @@
+---
+- hosts: jenkins
+  become: true
+  tasks:
+  - name: include install-java
+    include_role:
+      name: install-java

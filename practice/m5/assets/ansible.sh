@@ -31,8 +31,6 @@ fi
 # Prepare ansible env
 ########################
 
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-
 # configure default ENV dir variable
 export ANSIBLE_ENV_DIR=$1/ansible-env/
 
@@ -40,6 +38,10 @@ cp /etc/environment /tmp/env_temp.txt
 echo 'ANSIBLE_ENV_DIR="'$1'/ansible-env/"' >> /tmp/env_temp.txt
 sudo cp /tmp/env_temp.txt /etc/environment
 rm /tmp/env_temp.txt
+
+echo " ***************************************************************************** "
+echo " *** Starting configuration of with /etc/ansible/ansible_cfg"
+echo " ***************************************************************************** "
 
 # setup configuration
 ansible-playbook $1/ansible-dev/playbooks/install_ansible_cfg.yml -i $1/ansible-dev/inventory.ini -e inventory_dir=$1/ansible-dev
@@ -52,13 +54,10 @@ echo " *************************************************************************
 echo " *** Starting provision with ansible (will take some time...)"
 echo " ***************************************************************************** "
 
-# export ANSIBLE_CONFIG="${SCRIPT_DIR}/ansible/ansible.cfg"
-
 ANSIBLE_EXTRA_VARS=""
 
 # run ansible
-# ansible-galaxy install geerlingguy.docker
-# ansible-playbook "$SCRIPT_DIR/ansible/playbooks/install_deps.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
+ansible-playbook "$1/ansible-dev/playbooks/install-docker.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
 # ansible-playbook "$SCRIPT_DIR/ansible/playbooks/install_docker.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
 # ansible-playbook "$SCRIPT_DIR/ansible/playbooks/docker_run_db.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"
 # ansible-playbook "$SCRIPT_DIR/ansible/playbooks/docker_run_nginx.yml" --extra-vars="$ANSIBLE_EXTRA_VARS"

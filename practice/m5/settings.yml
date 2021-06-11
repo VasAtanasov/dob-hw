@@ -19,9 +19,9 @@ x-default: &DEFAULT
     scripts: []
 
 machines:
-    master:
+    jenkins:
         <<: *DEFAULT
-        hostname: "master.dob"
+        hostname: "jenkins.dob"
         network:
             private:
                 address: 192.168.99.100
@@ -29,20 +29,20 @@ machines:
             - guest: 80
               host: 8000
               auto_correct: true
-              id: "app"
+              id: "server"
             - guest: 8080
               host: 8080
               auto_correct: true
-              id: "app"
+              id: "jenkins"
 
-    client:
-        <<: *DEFAULT
-        hostname: "client.dob"
-        network:
-            private:
-                address: 192.168.99.101
+    # docker: &DOCKER
+    #     <<: *DEFAULT
+    #     hostname: "docker.dob"
+    #     network:
+    #         private:
+    #             address: 192.168.99.101
 
-    ansible:
+    ansible: &ANSIBLE
         <<: *DEFAULT
         box: "vasatanasov/ubuntu-2004-ansible"
         hostname: "ansible.dob"
