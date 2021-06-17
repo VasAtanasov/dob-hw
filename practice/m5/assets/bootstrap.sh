@@ -16,7 +16,7 @@ disable_sudo_password() {
 
 disable_sudo_password 'vagrant'
 
-# Enable PasswordAuthentication beacause ubuntu vagrant boxes come PasswordAuthentication disabled
+# Enable PasswordAuthentication beacause ubuntu vagrant boxes comes with PasswordAuthentication disabled
 sed -i '/.*PasswordAuthentication.*/d' /etc/ssh/sshd_config
 echo 'PasswordAuthentication yes' | tee -a /etc/ssh/sshd_config > /dev/null
 service sshd restart

@@ -10,6 +10,9 @@ class Machine
     @hostvars = {
       ansible_ssh_host: "#{@ip}",
       ansible_host: "#{@ip}",
+      ansible_ssh_user: "vagrant",
+      ansible_ssh_pass: "vagrant",
+      ansible_python_interpreter: "/usr/bin/python3"
     }
   end
 

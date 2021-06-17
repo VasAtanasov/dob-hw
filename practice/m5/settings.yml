@@ -35,12 +35,12 @@ machines:
               auto_correct: true
               id: "jenkins"
 
-    # docker: &DOCKER
-    #     <<: *DEFAULT
-    #     hostname: "docker.dob"
-    #     network:
-    #         private:
-    #             address: 192.168.99.101
+    docker: &DOCKER
+        <<: *DEFAULT
+        hostname: "docker.dob"
+        network:
+            private:
+                address: 192.168.99.101
 
     ansible: &ANSIBLE
         <<: *DEFAULT

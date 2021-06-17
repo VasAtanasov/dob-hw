@@ -18,29 +18,11 @@ if ! File.exists? vagrant_assets then
 end
 
 VAGRANTFILE_API_VERSION = settings['VAGRANTFILE_API_VERSION'] || "2"
+ANSIBLE_INVENTORY_FILE = "#{vagrant_assets}/ansible-dev/inventory.ini"
 
-# machines = settings['machines']
 machines = generate_machines(settings['machines'])
 inventory_machines = machines.select {|m| m.name != "ansible" }
-inventory = get_inventory(inventory_machines)
-
-ANSIBLE_INVENTORY_FILE = "#{vagrant_assets}/ansible-dev/inventory.ini"
-# create empty inventory file
-File.open("#{ANSIBLE_INVENTORY_FILE}" ,'w') do | f |
-  f.write ""
-end
-
-def add_host(file, machine)
-  File.open("#{file}" ,'a') do | f |
-    f.write "[#{machine.name}]\n"
-    f.write "#{machine.hostname} ansible_host=#{machine.ip} ansible_ssh_port=22 ansible_ssh_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3\n\n"
-  end
-end
-
-# add all hosts to invenotry.ini file
-inventory_machines.each do |machine|
-  add_host(ANSIBLE_INVENTORY_FILE, machine)
-end
+inventory = generate_inventory(inventory_machines, ANSIBLE_INVENTORY_FILE)
 
 #################
 # Hosts for /etc/hosts
